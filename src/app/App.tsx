@@ -318,7 +318,7 @@ function SidebarContent({ active, onNav, onClose }: { active: string; onNav: (id
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
           <div>
-            <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>MERIDIAN</div>
+            <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
             <div className="text-[9px] text-muted-foreground" style={mono}>ASSET MANAGEMENT</div>
           </div>
         </button>
@@ -1307,7 +1307,7 @@ function HomePage() {
               <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
             </div>
             <div>
-              <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>MERIDIAN</div>
+              <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
               <div className="text-[9px] text-muted-foreground hidden sm:block" style={mono}>ASSET MANAGEMENT</div>
             </div>
           </div>
@@ -1358,7 +1358,7 @@ function HomePage() {
               <span style={{ color: primary }}>With</span>{" "}<span className="text-foreground">Precision</span>
             </h1>
             <p className="text-muted-foreground text-base sm:text-lg mb-8 max-w-lg leading-relaxed" style={{ fontWeight: 300 }}>
-              Meridian delivers institutional-grade investment management to family offices, endowments, and high-net-worth individuals.
+              Aion Blue Stone delivers institutional-grade investment management to family offices, endowments, and high-net-worth individuals.
             </p>
             <div className="flex flex-wrap gap-3">
               <Btn variant="primary" onClick={() => navigate("signup")} className="px-5 sm:px-6 py-2.5 sm:py-3 text-sm">
@@ -1424,7 +1424,7 @@ function HomePage() {
             Ready to invest with conviction?
           </h2>
           <p className="text-muted-foreground mb-8 text-sm sm:text-base" style={{ fontWeight: 300 }}>
-            Join over 300 institutional and private clients who trust Meridian to manage their most important capital.
+            Join over 300 institutional and private clients who trust Aion Blue Stone to manage their most important capital.
           </p>
           <div className="flex justify-center gap-3 flex-wrap">
             <Btn variant="primary" onClick={() => navigate("signup")} className="px-6 sm:px-8 py-2.5 sm:py-3 text-sm">
@@ -1446,10 +1446,10 @@ function HomePage() {
                 <div className="w-6 h-6 bg-primary flex items-center justify-center">
                   <Shield className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={2} />
                 </div>
-                <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.12em" }}>MERIDIAN</span>
+                <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.12em" }}>AION BLUE STONE</span>
               </div>
               <p className="text-[10px] text-muted-foreground max-w-xs" style={mono}>
-                Meridian Asset Management LLC is registered with the SEC. Past performance does not guarantee future results.
+                Aion Blue Stone Asset Management LLC is registered with the SEC. Past performance does not guarantee future results.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-6 sm:gap-8 text-[11px]" style={mono}>
@@ -1494,7 +1494,7 @@ function LoginPage() {
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
           <div>
-            <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>MERIDIAN</div>
+            <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
             <div className="text-[9px] text-muted-foreground" style={mono}>ASSET MANAGEMENT</div>
           </div>
         </div>
@@ -1507,7 +1507,7 @@ function LoginPage() {
           </h2>
           <p className="text-muted-foreground" style={{ fontWeight: 300 }}>Access real-time performance data, review your allocations, and communicate with your advisor — all in one secure place.</p>
         </div>
-        <div className="relative text-[10px] text-muted-foreground" style={mono}>© 2024 Meridian Asset Management LLC · SEC Registered</div>
+        <div className="relative text-[10px] text-muted-foreground" style={mono}>© 2024 Aion Blue Stone Asset Management LLC · SEC Registered</div>
       </div>
 
       {/* Form */}
@@ -1517,7 +1517,7 @@ function LoginPage() {
           <div className="w-7 h-7 bg-primary flex items-center justify-center">
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
-          <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>MERIDIAN</span>
+          <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
         </div>
 
         <div className="w-full max-w-sm">
@@ -1582,7 +1582,7 @@ function SignupPage() {
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
           <div>
-            <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>MERIDIAN</div>
+            <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
             <div className="text-[9px] text-muted-foreground" style={mono}>ASSET MANAGEMENT</div>
           </div>
         </div>
@@ -1601,7 +1601,7 @@ function SignupPage() {
             ))}
           </div>
         </div>
-        <div className="relative text-[10px] text-muted-foreground" style={mono}>© 2024 Meridian Asset Management LLC</div>
+        <div className="relative text-[10px] text-muted-foreground" style={mono}>© 2024 Aion Blue Stone Asset Management LLC</div>
       </div>
 
       {/* Form */}
@@ -1613,7 +1613,7 @@ function SignupPage() {
               <div className="w-6 h-6 bg-primary flex items-center justify-center">
                 <Shield className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={2} />
               </div>
-              <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>MERIDIAN</span>
+              <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
             </div>
             <div className="flex gap-1">
               {steps.map(({ n }) => (
