@@ -61,6 +61,32 @@ const themes: Record<ThemeMode, Record<string, string>> = {
 
 type NavPage = "home" | "login" | "signup" | "forgot-password" | "app" | "payment" | "wallet";
 
+type AppRoute = {
+  page: NavPage;
+  subview: string;
+};
+
+const routeToPath = (route: AppRoute) => {
+  if (route.page === "home") return "/";
+  if (route.page === "app") return `/app/${route.subview || "dashboard"}`;
+  return `/${route.page}`;
+};
+
+const pathToRoute = (path: string): AppRoute => {
+  const cleanedPath = path.replace(/^\/+|\/+$/g, "");
+  if (!cleanedPath) return { page: "home", subview: "dashboard" };
+
+  const [first, ...rest] = cleanedPath.split("/");
+  if (first === "app") return { page: "app", subview: rest[0] || "dashboard" };
+  if (first === "wallet") return { page: "wallet", subview: "dashboard" };
+  if (first === "payment") return { page: "payment", subview: "dashboard" };
+  if (first === "login") return { page: "login", subview: "dashboard" };
+  if (first === "signup") return { page: "signup", subview: "dashboard" };
+  if (first === "forgot-password") return { page: "forgot-password", subview: "dashboard" };
+
+  return { page: "home", subview: "dashboard" };
+};
+
 interface AppCtx {
   theme: ThemeMode; setTheme: (t: ThemeMode) => void;
   focusMode: boolean; setFocusMode: (v: boolean) => void;
@@ -2030,13 +2056,44 @@ function SignupPage() {
 export default function App() {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [focusMode, setFocusMode] = useState(false);
-  const [currentPage, setCurrentPage] = useState<NavPage>("home");
-  const [currentSubview, setCurrentSubview] = useState("dashboard");
+  const initialRoute = typeof window !== "undefined" ? pathToRoute(window.location.pathname) : { page: "home" as NavPage, subview: "dashboard" };
+  const [currentPage, setCurrentPage] = useState<NavPage>(initialRoute.page);
+  const [currentSubview, setCurrentSubview] = useState(initialRoute.subview);
+
+  const applyRoute = (route: AppRoute, pushHistory = true) => {
+    const nextPage = route.page;
+    const nextSubview = nextPage === "app" ? route.subview || "dashboard" : "dashboard";
+
+    setCurrentPage(nextPage);
+    setCurrentSubview(nextSubview);
+
+    if (pushHistory && typeof window !== "undefined") {
+      const nextPath = routeToPath({ page: nextPage, subview: nextSubview });
+      window.history.pushState({ page: nextPage, subview: nextSubview }, "", nextPath);
+    }
+  };
 
   const navigate = (page: NavPage, subview = "dashboard") => {
-    setCurrentPage(page);
-    if (subview) setCurrentSubview(subview);
+    applyRoute({ page, subview: page === "app" ? subview : "dashboard" });
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const initialPath = routeToPath(initialRoute);
+    if (window.location.pathname !== initialPath) {
+      window.history.replaceState(initialRoute, "", initialPath);
+    }
+
+    const onPopState = (event: PopStateEvent) => {
+      const nextRoute = (event.state as AppRoute | null) ?? pathToRoute(window.location.pathname);
+      setCurrentPage(nextRoute.page);
+      setCurrentSubview(nextRoute.page === "app" ? nextRoute.subview || "dashboard" : "dashboard");
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [initialRoute]);
 
   const ctx: AppCtx = { theme, setTheme, focusMode, setFocusMode, navigate, currentPage, currentSubview };
 
