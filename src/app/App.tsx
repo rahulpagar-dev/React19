@@ -13,6 +13,7 @@ import {
   BarChart2, Globe, Building2, Menu, Home,
   RefreshCw, Download, Upload, AlertCircle, ChevronRight
 } from "lucide-react";
+import { getPortfolio, getQuotes } from "../services/api";
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,32 @@ const themes: Record<ThemeMode, Record<string, string>> = {
 
 type NavPage = "home" | "login" | "signup" | "forgot-password" | "app" | "payment" | "wallet";
 
+type AppRoute = {
+  page: NavPage;
+  subview: string;
+};
+
+const routeToPath = (route: AppRoute) => {
+  if (route.page === "home") return "/";
+  if (route.page === "app") return `/app/${route.subview || "dashboard"}`;
+  return `/${route.page}`;
+};
+
+const pathToRoute = (path: string): AppRoute => {
+  const cleanedPath = path.replace(/^\/+|\/+$/g, "");
+  if (!cleanedPath) return { page: "home", subview: "dashboard" };
+
+  const [first, ...rest] = cleanedPath.split("/");
+  if (first === "app") return { page: "app", subview: rest[0] || "dashboard" };
+  if (first === "wallet") return { page: "wallet", subview: "dashboard" };
+  if (first === "payment") return { page: "payment", subview: "dashboard" };
+  if (first === "login") return { page: "login", subview: "dashboard" };
+  if (first === "signup") return { page: "signup", subview: "dashboard" };
+  if (first === "forgot-password") return { page: "forgot-password", subview: "dashboard" };
+
+  return { page: "home", subview: "dashboard" };
+};
+
 interface AppCtx {
   theme: ThemeMode; setTheme: (t: ThemeMode) => void;
   focusMode: boolean; setFocusMode: (v: boolean) => void;
@@ -70,6 +97,26 @@ interface AppCtx {
 
 const Ctx = createContext<AppCtx>({} as AppCtx);
 const useApp = () => useContext(Ctx);
+
+interface PortfolioApiResponse {
+  totalValue: number;
+  dayChange: number;
+  dayChangePercent: number;
+  cashBalance: number;
+  holdings: Array<{ symbol: string; name: string; qty: number; price: number; value: number }>;
+}
+
+interface QuoteApiResponse {
+  symbol: string;
+  price: number;
+  change: number;
+}
+
+const getSectorForSymbol = (symbol: string) => {
+  if (symbol === "TLT") return "Fixed Income";
+  if (symbol === "GLD") return "Commodities";
+  return "Technology";
+};
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -646,28 +693,72 @@ function DashboardView() {
 function PortfolioView() {
   const { pos } = useChartColors();
   const [category, setCategory] = useState("ALL");
-  const total = holdings.reduce((s, h) => s + h.value, 0);
-  const filteredHoldings = category === "ALL" ? holdings : holdings.filter(h => {
-    if (category === "STOCKS") return ["Technology", "Financials", "Healthcare", "Energy"].includes(h.sector);
-    if (category === "ETFS") return h.ticker === "TLT";
-    if (category === "COMMODITY") return h.ticker === "GLD";
-    return true;
-  });
+  const [portfolioData, setPortfolioData] = useState<PortfolioApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPortfolio = async () => {
+      try {
+        const data = await getPortfolio() as PortfolioApiResponse;
+        if (!cancelled) {
+          setPortfolioData(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unable to load portfolio");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPortfolio();
+    return () => { cancelled = true; };
+  }, []);
+
+  const resolvedHoldings = (portfolioData?.holdings ?? []).length > 0
+    ? portfolioData!.holdings.map(h => ({
+        ticker: h.symbol,
+        name: h.name,
+        sector: getSectorForSymbol(h.symbol),
+        shares: h.qty,
+        price: h.price,
+        value: h.value,
+        change: 0,
+        weight: 0,
+      }))
+    : holdings;
+
+  const total = portfolioData?.totalValue ?? holdings.reduce((s, h) => s + h.value, 0);
+  const filteredHoldings = category === "ALL"
+    ? resolvedHoldings
+    : resolvedHoldings.filter(h => {
+        if (category === "STOCKS") return ["Technology", "Financials", "Healthcare", "Energy"].includes(h.sector);
+        if (category === "ETFS") return h.ticker === "TLT";
+        if (category === "COMMODITY") return h.ticker === "GLD";
+        return true;
+      });
 
   return (
     <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <MetricCard label="Portfolio Value" value={fmtC(total)} delta="+18.74% YTD" positive />
-        <MetricCard label="Positions" value={`${holdings.length}`} sub="6 sectors" />
-        <MetricCard label="Day Change" value="+$84,320" delta="+0.62% today" positive />
-        <MetricCard label="Beta" value="0.91" sub="vs S&P 500" />
+        <MetricCard label="Portfolio Value" value={fmtC(total)} delta={portfolioData ? `${portfolioData.dayChangePercent >= 0 ? "+" : ""}${fmt(portfolioData.dayChangePercent)}% today` : "+18.74% YTD"} positive={portfolioData ? portfolioData.dayChangePercent >= 0 : true} />
+        <MetricCard label="Positions" value={`${resolvedHoldings.length}`} sub="Live holdings" />
+        <MetricCard label="Day Change" value={portfolioData ? `${portfolioData.dayChange >= 0 ? "+" : ""}${fmtC(portfolioData.dayChange)}` : "+$84,320"} delta={portfolioData ? `${portfolioData.dayChange >= 0 ? "+" : ""}${fmt(portfolioData.dayChangePercent)}% today` : "+0.62% today"} positive={portfolioData ? portfolioData.dayChange >= 0 : true} />
+        <MetricCard label="Cash" value={portfolioData ? fmtC(portfolioData.cashBalance) : "$284,300"} sub="Available balance" />
       </div>
 
       {/* Mobile: card list. Desktop: table */}
       <div className="bg-card border border-border overflow-hidden">
         <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border flex items-center justify-between flex-wrap gap-2">
           <Label>Holdings — Composite</Label>
-          <div className="text-[10px] text-muted-foreground" style={mono}>{filteredHoldings.length} positions · {fmtC(total)}</div>
+          <div className="text-[10px] text-muted-foreground" style={mono}>{loading ? "Loading live data..." : error ? "Offline fallback" : `${filteredHoldings.length} positions · ${fmtC(total)}`}</div>
         </div>
         <div className="px-4 sm:px-5 py-3 flex gap-2 flex-wrap border-b border-border">
           {['ALL', 'STOCKS', 'ETFS', 'COMMODITY'].map(item => (
@@ -905,13 +996,47 @@ function TransactionsView() {
 // ─── Reports ──────────────────────────────────────────────────────────────────
 
 function WatchlistView() {
+  const [quotes, setQuotes] = useState<QuoteApiResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadQuotes = async () => {
+      try {
+        const data = await getQuotes() as QuoteApiResponse[];
+        if (!cancelled) {
+          setQuotes(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unable to load quotes");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadQuotes();
+    return () => { cancelled = true; };
+  }, []);
+
+  const resolvedWatchlist = quotes.length > 0
+    ? quotes.map(item => ({ ticker: item.symbol, name: item.symbol, price: item.price, change: item.change, note: "Live quote" }))
+    : watchlistData;
+
   return (
     <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
       <div className="bg-card border border-border p-4 sm:p-5">
         <Label>Market Monitor</Label>
         <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Your Watchlist</div>
+        <div className="text-[10px] text-muted-foreground mt-2" style={mono}>{loading ? "Loading live quotes..." : error ? "Using fallback market data" : "Live quotes from backend"}</div>
         <div className="grid gap-3 mt-4">
-          {watchlistData.map(item => (
+          {resolvedWatchlist.map(item => (
             <div key={item.ticker} className="border border-border p-3 flex items-center justify-between">
               <div>
                 <div className="text-sm text-foreground" style={{ ...condensed, fontWeight: 600 }}>{item.ticker}</div>
@@ -2030,13 +2155,44 @@ function SignupPage() {
 export default function App() {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [focusMode, setFocusMode] = useState(false);
-  const [currentPage, setCurrentPage] = useState<NavPage>("home");
-  const [currentSubview, setCurrentSubview] = useState("dashboard");
+  const initialRoute = typeof window !== "undefined" ? pathToRoute(window.location.pathname) : { page: "home" as NavPage, subview: "dashboard" };
+  const [currentPage, setCurrentPage] = useState<NavPage>(initialRoute.page);
+  const [currentSubview, setCurrentSubview] = useState(initialRoute.subview);
+
+  const applyRoute = (route: AppRoute, pushHistory = true) => {
+    const nextPage = route.page;
+    const nextSubview = nextPage === "app" ? route.subview || "dashboard" : "dashboard";
+
+    setCurrentPage(nextPage);
+    setCurrentSubview(nextSubview);
+
+    if (pushHistory && typeof window !== "undefined") {
+      const nextPath = routeToPath({ page: nextPage, subview: nextSubview });
+      window.history.pushState({ page: nextPage, subview: nextSubview }, "", nextPath);
+    }
+  };
 
   const navigate = (page: NavPage, subview = "dashboard") => {
-    setCurrentPage(page);
-    if (subview) setCurrentSubview(subview);
+    applyRoute({ page, subview: page === "app" ? subview : "dashboard" });
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const initialPath = routeToPath(initialRoute);
+    if (window.location.pathname !== initialPath) {
+      window.history.replaceState(initialRoute, "", initialPath);
+    }
+
+    const onPopState = (event: PopStateEvent) => {
+      const nextRoute = (event.state as AppRoute | null) ?? pathToRoute(window.location.pathname);
+      setCurrentPage(nextRoute.page);
+      setCurrentSubview(nextRoute.page === "app" ? nextRoute.subview || "dashboard" : "dashboard");
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [initialRoute]);
 
   const ctx: AppCtx = { theme, setTheme, focusMode, setFocusMode, navigate, currentPage, currentSubview };
 
