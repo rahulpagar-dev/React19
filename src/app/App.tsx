@@ -1810,7 +1810,7 @@ function LoginPage() {
       {/* Brand panel — hidden on mobile */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 border-r border-border bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(0deg,currentColor,currentColor 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,currentColor,currentColor 1px,transparent 1px,transparent 40px)", color: "var(--foreground)" }} />
-        <div className="relative flex items-center gap-2.5">
+        <button type="button" onClick={() => navigate("home")} className="relative flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity cursor-pointer">
           <div className="w-7 h-7 bg-primary flex items-center justify-center">
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
@@ -1818,7 +1818,7 @@ function LoginPage() {
             <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
             <div className="text-[9px] text-muted-foreground" style={mono}>ASSET MANAGEMENT</div>
           </div>
-        </div>
+        </button>
         <div className="relative">
           <div className="text-[10px] text-muted-foreground tracking-widest mb-4 flex items-center gap-2" style={mono}>
             <span className="w-8 h-px bg-primary inline-block" />CLIENT PORTAL
@@ -1834,12 +1834,12 @@ function LoginPage() {
       {/* Form */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 py-10 sm:py-12">
         {/* Mobile logo */}
-        <div className="lg:hidden flex items-center gap-2.5 mb-8">
+        <button type="button" onClick={() => navigate("home")} className="lg:hidden flex items-center gap-2.5 mb-8 hover:opacity-90 transition-opacity cursor-pointer">
           <div className="w-7 h-7 bg-primary flex items-center justify-center">
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
           <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
-        </div>
+        </button>
 
         <div className="w-full max-w-sm">
           <div className="mb-6 sm:mb-8">
@@ -1898,7 +1898,7 @@ function SignupPage() {
       {/* Brand panel — hidden on mobile */}
       <div className="hidden lg:flex lg:w-2/5 flex-col justify-between p-12 border-r border-border bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "24px 24px", color: "var(--foreground)" }} />
-        <div className="relative flex items-center gap-2.5">
+        <button type="button" onClick={() => navigate("home")} className="relative flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity cursor-pointer">
           <div className="w-7 h-7 bg-primary flex items-center justify-center">
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
@@ -1906,7 +1906,7 @@ function SignupPage() {
             <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
             <div className="text-[9px] text-muted-foreground" style={mono}>ASSET MANAGEMENT</div>
           </div>
-        </div>
+        </button>
         <div className="relative">
           <h2 style={{ ...condensed, fontWeight: 700, fontSize: "2.5rem", letterSpacing: "0.04em", textTransform: "uppercase", lineHeight: 1.1 }} className="text-foreground mb-6">
             Start building<br /><span className="text-primary">wealth</span> today.
@@ -1930,12 +1930,12 @@ function SignupPage() {
         {/* Mobile header */}
         <div className="lg:hidden w-full max-w-md mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <button type="button" onClick={() => navigate("home")} className="flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer">
               <div className="w-6 h-6 bg-primary flex items-center justify-center">
                 <Shield className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={2} />
               </div>
               <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
-            </div>
+            </button>
             <div className="flex gap-1">
               {steps.map(({ n }) => (
                 <div key={n} className={`w-6 h-1 transition-colors ${step >= n ? "bg-primary" : "bg-border"}`} />
