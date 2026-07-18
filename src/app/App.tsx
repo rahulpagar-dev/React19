@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   LayoutDashboard, Users, Briefcase, ArrowLeftRight, FileBarChart2,
-  Bell, Search, TrendingUp, TrendingDown, Shield,
+  Bell, Search, TrendingUp, TrendingDown, Shield, ArrowLeft,
   CircleDot, Sun, Moon, Eye, Minimize2, Maximize2, ArrowUpRight,
   ArrowDownRight, Wallet, CreditCard,
   ArrowRight, Check, X, Plus, Lock, Mail, User,
@@ -59,7 +59,7 @@ const themes: Record<ThemeMode, Record<string, string>> = {
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
-type NavPage = "home" | "login" | "signup" | "app" | "payment" | "wallet";
+type NavPage = "home" | "login" | "signup" | "forgot-password" | "app" | "payment" | "wallet";
 
 interface AppCtx {
   theme: ThemeMode; setTheme: (t: ThemeMode) => void;
@@ -152,6 +152,55 @@ const payHistory = [
   { id: "PAY-4405", date: "Dec 2", to: "Citi Private", method: "Wire", amount: 420000, status: "completed" },
 ];
 
+const productCatalog = [
+  { name: "Aion Blue Stone Equity Fund", type: "Fund" },
+  { name: "Apple Inc.", type: "Stock" },
+  { name: "SPDR Gold Shares", type: "Commodity" },
+  { name: "iShares 20Y Treasury", type: "ETF" },
+  { name: "Aion Blue Stone Balanced Fund", type: "Fund" },
+];
+
+const watchlistData = [
+  { ticker: "NVDA", name: "NVIDIA Corp.", price: 495.8, change: 4.21, note: "Momentum breakout" },
+  { ticker: "TLT", name: "iShares 20Y Treasury", price: 92.35, change: -0.18, note: "Rate hedge" },
+  { ticker: "GLD", name: "SPDR Gold Shares", price: 186.4, change: 0.74, note: "Safe haven" },
+];
+
+const orderHistory = [
+  { id: "ORD-1042", symbol: "AAPL", side: "BUY", quantity: 120, price: 192.45, status: "OPEN", date: "Dec 24" },
+  { id: "ORD-1039", symbol: "MSFT", side: "SELL", quantity: 80, price: 378.85, status: "CLOSED", date: "Dec 22" },
+  { id: "ORD-1035", symbol: "TLT", side: "BUY", quantity: 300, price: 92.35, status: "PENDING", date: "Dec 20" },
+  { id: "ORD-1029", symbol: "GLD", side: "SELL", quantity: 40, price: 186.4, status: "FAILED", date: "Dec 18" },
+];
+
+const fundsTransactions = [
+  { id: "TXN-9001", date: "Dec 24", description: "Weekly autopay", amount: 15000, status: "Completed" },
+  { id: "TXN-9000", date: "Dec 20", description: "Bank transfer", amount: 25000, status: "Completed" },
+  { id: "TXN-8999", date: "Dec 16", description: "Dividend credit", amount: 8400, status: "Completed" },
+];
+
+const referralPerks = [
+  { title: "$100 credit", detail: "Per successful referral" },
+  { title: "Priority onboarding", detail: "Fast track your network" },
+  { title: "Quarterly rewards", detail: "Bonus for active referrals" },
+];
+
+const diaryEntries = [
+  { date: "Dec 24", note: "Added to watchlist ahead of earnings", outcome: "Up 2.1%" },
+  { date: "Dec 21", note: "Trimmed TLT after rate repricing", outcome: "Protected gains" },
+];
+
+const linkedBanks = [
+  { bank: "Citibank", account: "**** 1842", type: "Checking" },
+  { bank: "HSBC", account: "**** 7710", type: "Savings" },
+];
+
+const notificationsData = [
+  { title: "Wallet funded", detail: "$25,000 received from bank transfer", time: "2m ago" },
+  { title: "Order filled", detail: "AAPL buy order completed", time: "25m ago" },
+  { title: "Referral reward", detail: "Your referral earned a $100 credit", time: "1h ago" },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (n: number, d = 2) => n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -242,6 +291,8 @@ function StatusBadge({ status }: { status: string }) {
     settled: "text-muted-foreground border-border",
     pending: "text-primary border-primary/40 bg-primary/5",
     completed: "text-[var(--chart-pos)] border-[var(--chart-pos)]/30",
+    closed: "text-muted-foreground border-border",
+    failed: "text-destructive border-destructive/30 bg-destructive/5",
     scheduled: "text-[#4A9EBF] border-[#4A9EBF]/30",
     draft: "text-primary border-primary/30",
     published: "text-[var(--chart-pos)] border-[var(--chart-pos)]/30",
@@ -281,6 +332,13 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "portfolio", label: "Portfolio", icon: Briefcase },
+  { id: "watchlist", label: "Watchlist", icon: TrendingUp },
+  { id: "orders", label: "Orders", icon: ArrowLeftRight },
+  { id: "funds", label: "Funds", icon: Wallet },
+  { id: "refer", label: "Refer & Earn", icon: Users },
+  { id: "diary", label: "Trade Diary", icon: FileBarChart2 },
+  { id: "banks", label: "Banks", icon: CreditCard },
+  { id: "notifications", label: "Notifications", icon: Bell },
   { id: "clients", label: "Clients", icon: Users },
   { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
   { id: "reports", label: "Reports", icon: FileBarChart2 },
@@ -403,7 +461,10 @@ function MobileBottomNav({ active, onNav }: { active: string; onNav: (id: string
 // ─── Topbar ───────────────────────────────────────────────────────────────────
 
 function Topbar({ title, subtitle, onMenuOpen }: { title: string; subtitle?: string; onMenuOpen?: () => void }) {
-  const { focusMode } = useApp();
+  const { focusMode, navigate } = useApp();
+  const [searchTerm, setSearchTerm] = useState("");
+  const results = searchTerm ? productCatalog.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.type.toLowerCase().includes(searchTerm.toLowerCase())) : [];
+
   return (
     <div className={`flex items-center justify-between border-b border-border bg-background shrink-0 ${focusMode ? "px-4 py-3" : "px-4 sm:px-6 lg:px-8 py-3 sm:py-4"}`}>
       <div className="flex items-center gap-3 min-w-0">
@@ -412,6 +473,9 @@ function Topbar({ title, subtitle, onMenuOpen }: { title: string; subtitle?: str
             <Menu className="w-4 h-4" />
           </button>
         )}
+        <button onClick={() => navigate("home")} className="p-1.5 text-muted-foreground hover:text-foreground border border-border shrink-0" title="Home">
+          <Home className="w-4 h-4" />
+        </button>
         <div className="min-w-0">
           <h1 className="text-foreground leading-none truncate"
             style={{ ...condensed, fontWeight: 700, fontSize: "clamp(1.1rem, 4vw, 1.5rem)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
@@ -425,9 +489,19 @@ function Topbar({ title, subtitle, onMenuOpen }: { title: string; subtitle?: str
       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <input placeholder="Search..." className="bg-muted border border-border pl-9 pr-4 py-2 text-xs text-foreground placeholder-muted-foreground outline-none focus:border-primary/50 w-40 lg:w-48 transition-colors" style={mono} />
+          <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search products..." className="bg-muted border border-border pl-9 pr-4 py-2 text-xs text-foreground placeholder-muted-foreground outline-none focus:border-primary/50 w-40 lg:w-48 transition-colors" style={mono} />
+          {results.length > 0 && (
+            <div className="absolute top-full left-0 mt-1 w-56 bg-card border border-border shadow-lg z-40">
+              {results.map(item => (
+                <div key={item.name} className="px-3 py-2 text-xs text-foreground border-b border-border last:border-b-0">
+                  <div className="font-medium">{item.name}</div>
+                  <div className="text-[10px] text-muted-foreground" style={mono}>{item.type}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <button className="relative p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors border border-border hover:border-primary/40">
+        <button onClick={() => navigate("app", "notifications")} className="relative p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors border border-border hover:border-primary/40">
           <Bell className="w-4 h-4" />
           <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
         </button>
@@ -571,7 +645,14 @@ function DashboardView() {
 
 function PortfolioView() {
   const { pos } = useChartColors();
+  const [category, setCategory] = useState("ALL");
   const total = holdings.reduce((s, h) => s + h.value, 0);
+  const filteredHoldings = category === "ALL" ? holdings : holdings.filter(h => {
+    if (category === "STOCKS") return ["Technology", "Financials", "Healthcare", "Energy"].includes(h.sector);
+    if (category === "ETFS") return h.ticker === "TLT";
+    if (category === "COMMODITY") return h.ticker === "GLD";
+    return true;
+  });
 
   return (
     <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
@@ -586,12 +667,17 @@ function PortfolioView() {
       <div className="bg-card border border-border overflow-hidden">
         <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border flex items-center justify-between flex-wrap gap-2">
           <Label>Holdings — Composite</Label>
-          <div className="text-[10px] text-muted-foreground" style={mono}>{holdings.length} positions · {fmtC(total)}</div>
+          <div className="text-[10px] text-muted-foreground" style={mono}>{filteredHoldings.length} positions · {fmtC(total)}</div>
+        </div>
+        <div className="px-4 sm:px-5 py-3 flex gap-2 flex-wrap border-b border-border">
+          {['ALL', 'STOCKS', 'ETFS', 'COMMODITY'].map(item => (
+            <button key={item} onClick={() => setCategory(item)} className={`text-[10px] px-2 py-1 border tracking-widest ${category === item ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground"}`} style={mono}>{item}</button>
+          ))}
         </div>
 
         {/* Mobile cards */}
         <div className="sm:hidden divide-y divide-border">
-          {holdings.map(h => (
+          {filteredHoldings.map(h => (
             <div key={h.ticker} className="px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div>
@@ -621,7 +707,7 @@ function PortfolioView() {
               </tr>
             </thead>
             <tbody>
-              {holdings.map((h, i) => (
+              {filteredHoldings.map((h, i) => (
                 <tr key={h.ticker} className={`border-b border-border hover:bg-muted/40 transition-colors ${i % 2 !== 0 ? "bg-muted/10" : ""}`}>
                   <td className="px-4 lg:px-5 py-3"><span className="text-primary font-bold" style={{ ...condensed, fontSize: "13px", letterSpacing: "0.08em" }}>{h.ticker}</span></td>
                   <td className="px-4 lg:px-5 py-3 text-foreground whitespace-nowrap" style={{ ...body, fontWeight: 400 }}>{h.name}</td>
@@ -810,6 +896,204 @@ function TransactionsView() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
+function WatchlistView() {
+  return (
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
+      <div className="bg-card border border-border p-4 sm:p-5">
+        <Label>Market Monitor</Label>
+        <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Your Watchlist</div>
+        <div className="grid gap-3 mt-4">
+          {watchlistData.map(item => (
+            <div key={item.ticker} className="border border-border p-3 flex items-center justify-between">
+              <div>
+                <div className="text-sm text-foreground" style={{ ...condensed, fontWeight: 600 }}>{item.ticker}</div>
+                <div className="text-xs text-muted-foreground" style={mono}>{item.name}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-foreground" style={mono}>${item.price.toFixed(2)}</div>
+                <div className={`text-xs ${item.change >= 0 ? "text-[var(--chart-pos)]" : "text-destructive"}`} style={mono}>{item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-card border border-border p-4 sm:p-5">
+        <Label>Watchlist Notes</Label>
+        <div className="text-sm text-muted-foreground mt-2" style={body}>Keep an eye on positioning, earnings, and macro catalysts for your favorite assets.</div>
+      </div>
+    </div>
+  );
+}
+
+function OrdersView() {
+  const [filter, setFilter] = useState("ALL");
+  const statuses = ["ALL", "OPEN", "CLOSED", "PENDING", "FAILED"];
+  const filtered = filter === "ALL" ? orderHistory : orderHistory.filter(item => item.status === filter);
+
+  return (
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
+      <div className="bg-card border border-border p-4 sm:p-5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <Label>Orders</Label>
+            <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Order Management</div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {statuses.map(status => (
+              <button key={status} onClick={() => setFilter(status)} className={`text-[10px] px-2 py-1 border tracking-widest ${filter === status ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground"}`} style={mono}>{status}</button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 space-y-2">
+          {filtered.map(order => (
+            <div key={order.id} className="border border-border p-3 flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <div className="text-sm text-foreground" style={{ ...condensed, fontWeight: 600 }}>{order.symbol} · {order.side}</div>
+                <div className="text-xs text-muted-foreground" style={mono}>{order.date} · {order.quantity} shares @ ${order.price.toFixed(2)}</div>
+              </div>
+              <StatusBadge status={order.status.toLowerCase()} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FundsView() {
+  const [schedule, setSchedule] = useState<"Weekly" | "Monthly">("Weekly");
+  return (
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <MetricCard label="Available Cash" value="$284,300" sub="Ready for deployment" />
+        <MetricCard label="Autopay" value={schedule} sub="Recurring transfer" />
+        <MetricCard label="Withdrawals" value="2" sub="This month" />
+      </div>
+      <div className="bg-card border border-border p-4 sm:p-5 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <Label>Fund Activity</Label>
+            <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Transfers & Statements</div>
+          </div>
+          <div className="flex gap-2">
+            {['Weekly', 'Monthly'].map(option => (
+              <button key={option} onClick={() => setSchedule(option as "Weekly" | "Monthly")} className={`text-[10px] px-2 py-1 border tracking-widest ${schedule === option ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground"}`} style={mono}>{option}</button>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-2">
+          {fundsTransactions.map(item => (
+            <div key={item.id} className="border border-border p-3 flex items-center justify-between">
+              <div>
+                <div className="text-sm text-foreground" style={body}>{item.description}</div>
+                <div className="text-xs text-muted-foreground" style={mono}>{item.date} · {item.id}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-foreground" style={mono}>${item.amount.toLocaleString()}</div>
+                <StatusBadge status={item.status.toLowerCase()} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="border border-border p-3 bg-muted/30">
+          <div className="text-sm text-foreground" style={{ ...condensed, fontWeight: 600 }}>Autopay funding {schedule.toLowerCase()}</div>
+          <div className="text-xs text-muted-foreground mt-1" style={mono}>Automated transfers are scheduled to keep your wallet funded without manual steps.</div>
+        </div>
+      </div>
+      <div className="bg-card border border-border p-4 sm:p-5 space-y-3">
+        <Label>Withdraw to Bank</Label>
+        <div className="text-sm text-muted-foreground" style={body}>Move available cash back into your linked bank account in a few taps.</div>
+        <div className="flex gap-2 flex-wrap">
+          <Btn variant="outline">WITHDRAW $25,000</Btn>
+          <Btn variant="primary">VIEW LEDGER STATEMENT</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReferView() {
+  return (
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
+      <div className="bg-card border border-border p-4 sm:p-5">
+        <Label>Refer & Earn</Label>
+        <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Invite friends and grow together</div>
+        <div className="mt-4 p-3 border border-primary/30 bg-primary/5 text-sm text-foreground" style={body}>Referral link: https://aionbluestone.com/invite/ABS-2048</div>
+        <div className="mt-4 grid gap-2">
+          {referralPerks.map(perk => (
+            <div key={perk.title} className="border border-border p-3">
+              <div className="text-sm text-foreground" style={{ ...condensed, fontWeight: 600 }}>{perk.title}</div>
+              <div className="text-xs text-muted-foreground" style={mono}>{perk.detail}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TradeDiaryView() {
+  return (
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
+      <div className="bg-card border border-border p-4 sm:p-5">
+        <Label>Trade Diary</Label>
+        <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Recent decisions</div>
+        <div className="mt-4 space-y-2">
+          {diaryEntries.map(entry => (
+            <div key={entry.date} className="border border-border p-3">
+              <div className="text-sm text-foreground" style={body}>{entry.note}</div>
+              <div className="text-xs text-muted-foreground mt-1" style={mono}>{entry.date} · {entry.outcome}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BanksView() {
+  return (
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
+      <div className="bg-card border border-border p-4 sm:p-5">
+        <Label>Banks</Label>
+        <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Linked accounts</div>
+        <div className="mt-4 grid gap-2">
+          {linkedBanks.map(bank => (
+            <div key={bank.account} className="border border-border p-3 flex items-center justify-between">
+              <div>
+                <div className="text-sm text-foreground" style={{ ...condensed, fontWeight: 600 }}>{bank.bank}</div>
+                <div className="text-xs text-muted-foreground" style={mono}>{bank.type} · {bank.account}</div>
+              </div>
+              <StatusBadge status="active" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotificationsView() {
+  return (
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-20 lg:pb-6">
+      <div className="bg-card border border-border p-4 sm:p-5">
+        <Label>Alerts</Label>
+        <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Recent activity</div>
+        <div className="mt-4 space-y-2">
+          {notificationsData.map(item => (
+            <div key={item.title} className="border border-border p-3">
+              <div className="text-sm text-foreground" style={body}>{item.title}</div>
+              <div className="text-xs text-muted-foreground mt-1" style={mono}>{item.detail} · {item.time}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -1191,6 +1475,13 @@ function PaymentPage() {
 const viewMeta: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: "Overview", subtitle: "DEC 23, 2024  ·  COMPOSITE PORTFOLIO" },
   portfolio: { title: "Portfolio", subtitle: "COMPOSITE HOLDINGS  ·  ALL ACCOUNTS" },
+  watchlist: { title: "Watchlist", subtitle: "MARKET MONITOR" },
+  orders: { title: "Orders", subtitle: "ORDER STATUS" },
+  funds: { title: "Funds", subtitle: "CASH MANAGEMENT" },
+  refer: { title: "Refer & Earn", subtitle: "REFERRAL PROGRAM" },
+  diary: { title: "Trade Diary", subtitle: "JOURNAL" },
+  banks: { title: "Banks", subtitle: "LINKED ACCOUNTS" },
+  notifications: { title: "Notifications", subtitle: "ACTIVITY CENTER" },
   clients: { title: "Clients", subtitle: "ACCOUNT MANAGEMENT  ·  7 ACCOUNTS" },
   transactions: { title: "Transactions", subtitle: "TRADE LEDGER  ·  Q4 2024" },
   reports: { title: "Reports", subtitle: "PERFORMANCE REPORTING" },
@@ -1225,6 +1516,13 @@ function AppShell({ subview, onNav, extraTitle }: { subview: string; onNav: (v: 
         <div className="flex-1 overflow-hidden flex flex-col">
           {subview === "dashboard" && <DashboardView />}
           {subview === "portfolio" && <PortfolioView />}
+          {subview === "watchlist" && <WatchlistView />}
+          {subview === "orders" && <OrdersView />}
+          {subview === "funds" && <FundsView />}
+          {subview === "refer" && <ReferView />}
+          {subview === "diary" && <TradeDiaryView />}
+          {subview === "banks" && <BanksView />}
+          {subview === "notifications" && <NotificationsView />}
           {subview === "clients" && <ClientsView />}
           {subview === "transactions" && <TransactionsView />}
           {subview === "reports" && <ReportsView />}
@@ -1471,6 +1769,29 @@ function HomePage() {
   );
 }
 
+function ForgotPasswordPage() {
+  const { navigate } = useApp();
+  const [email, setEmail] = useState("");
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-10" style={body}>
+      <div className="w-full max-w-md bg-card border border-border p-6 sm:p-8 space-y-4">
+        <button onClick={() => navigate("home")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground" style={mono}>
+          <ArrowLeft className="w-3.5 h-3.5" /> BACK TO HOME
+        </button>
+        <div>
+          <Label>Account Recovery</Label>
+          <div className="text-lg text-foreground mt-1" style={{ ...condensed, fontWeight: 700 }}>Forgot Password?</div>
+        </div>
+        <p className="text-sm text-muted-foreground" style={body}>Enter your email and we will send you a secure reset link.</p>
+        <FInput label="Email Address" type="email" placeholder="you@firm.com" value={email} onChange={setEmail} icon={Mail} />
+        <Btn variant="primary" className="w-full justify-center" onClick={() => navigate("login")}>SEND RESET LINK</Btn>
+        <button onClick={() => navigate("login")} className="text-sm text-primary hover:underline" style={mono}>RETURN TO SIGN IN</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 function LoginPage() {
@@ -1489,7 +1810,7 @@ function LoginPage() {
       {/* Brand panel — hidden on mobile */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 border-r border-border bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(0deg,currentColor,currentColor 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,currentColor,currentColor 1px,transparent 1px,transparent 40px)", color: "var(--foreground)" }} />
-        <div className="relative flex items-center gap-2.5">
+        <button type="button" onClick={() => navigate("home")} className="relative flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity cursor-pointer">
           <div className="w-7 h-7 bg-primary flex items-center justify-center">
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
@@ -1497,7 +1818,7 @@ function LoginPage() {
             <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
             <div className="text-[9px] text-muted-foreground" style={mono}>ASSET MANAGEMENT</div>
           </div>
-        </div>
+        </button>
         <div className="relative">
           <div className="text-[10px] text-muted-foreground tracking-widest mb-4 flex items-center gap-2" style={mono}>
             <span className="w-8 h-px bg-primary inline-block" />CLIENT PORTAL
@@ -1513,12 +1834,12 @@ function LoginPage() {
       {/* Form */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 py-10 sm:py-12">
         {/* Mobile logo */}
-        <div className="lg:hidden flex items-center gap-2.5 mb-8">
+        <button type="button" onClick={() => navigate("home")} className="lg:hidden flex items-center gap-2.5 mb-8 hover:opacity-90 transition-opacity cursor-pointer">
           <div className="w-7 h-7 bg-primary flex items-center justify-center">
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
           <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
-        </div>
+        </button>
 
         <div className="w-full max-w-sm">
           <div className="mb-6 sm:mb-8">
@@ -1533,7 +1854,7 @@ function LoginPage() {
                 <div className="w-4 h-4 border border-border bg-input-background flex items-center justify-center"><div className="w-2 h-2 bg-primary opacity-0" /></div>
                 <span className="text-xs text-muted-foreground" style={mono}>REMEMBER ME</span>
               </label>
-              <button className="text-xs text-primary hover:underline" style={mono}>FORGOT PASSWORD?</button>
+              <button onClick={() => navigate("forgot-password")} className="text-xs text-primary hover:underline" style={mono}>FORGOT PASSWORD?</button>
             </div>
             <button onClick={handleLogin} disabled={loading || !email || !password}
               className="w-full py-3 bg-primary text-primary-foreground text-sm tracking-widest disabled:opacity-40 hover:opacity-90 transition-all flex items-center justify-center gap-2"
@@ -1577,7 +1898,7 @@ function SignupPage() {
       {/* Brand panel — hidden on mobile */}
       <div className="hidden lg:flex lg:w-2/5 flex-col justify-between p-12 border-r border-border bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "24px 24px", color: "var(--foreground)" }} />
-        <div className="relative flex items-center gap-2.5">
+        <button type="button" onClick={() => navigate("home")} className="relative flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity cursor-pointer">
           <div className="w-7 h-7 bg-primary flex items-center justify-center">
             <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
           </div>
@@ -1585,7 +1906,7 @@ function SignupPage() {
             <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
             <div className="text-[9px] text-muted-foreground" style={mono}>ASSET MANAGEMENT</div>
           </div>
-        </div>
+        </button>
         <div className="relative">
           <h2 style={{ ...condensed, fontWeight: 700, fontSize: "2.5rem", letterSpacing: "0.04em", textTransform: "uppercase", lineHeight: 1.1 }} className="text-foreground mb-6">
             Start building<br /><span className="text-primary">wealth</span> today.
@@ -1609,12 +1930,12 @@ function SignupPage() {
         {/* Mobile header */}
         <div className="lg:hidden w-full max-w-md mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <button type="button" onClick={() => navigate("home")} className="flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer">
               <div className="w-6 h-6 bg-primary flex items-center justify-center">
                 <Shield className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={2} />
               </div>
               <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
-            </div>
+            </button>
             <div className="flex gap-1">
               {steps.map(({ n }) => (
                 <div key={n} className={`w-6 h-1 transition-colors ${step >= n ? "bg-primary" : "bg-border"}`} />
@@ -1725,6 +2046,7 @@ export default function App() {
         {currentPage === "home" && <HomePage />}
         {currentPage === "login" && <LoginPage />}
         {currentPage === "signup" && <SignupPage />}
+        {currentPage === "forgot-password" && <ForgotPasswordPage />}
         {currentPage === "app" && (
           <AppShell subview={currentSubview} onNav={(v) => {
             if (v === "wallet" || v === "payment") navigate(v as NavPage);
