@@ -1726,8 +1726,8 @@ function HomePage() {
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-primary flex items-center justify-center">
-              <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
+            <div className="w-7 h-7 overflow-hidden border border-border bg-card flex items-center justify-center">
+              <img src="/logo.svg" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
@@ -1772,6 +1772,9 @@ function HomePage() {
       <section className="pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div>
+            <div className="mb-6 inline-flex items-center justify-center border border-border bg-card/80 p-4 shadow-sm">
+              <img src="/logo.svg" alt="Aion Blue Stone logo" className="h-20 w-20 sm:h-24 sm:w-24" />
+            </div>
             <div className="text-[10px] text-muted-foreground tracking-widest mb-5 flex items-center gap-2" style={mono}>
               <span className="w-8 h-px bg-primary inline-block" />REGULATED · SEC & FINRA REGISTERED
             </div>
