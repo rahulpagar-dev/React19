@@ -419,9 +419,9 @@ function SidebarContent({ active, onNav, onClose }: { active: string; onNav: (id
     <div className="flex flex-col h-full w-64 lg:w-56 bg-background border-r border-border">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <button onClick={() => goPage("home")} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <div className="w-7 h-7 bg-primary flex items-center justify-center shrink-0">
-            <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
-          </div>
+            <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
+              <img src="/logo.png" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
+            </div>
           <div>
             <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
             <div className="text-[9px] text-muted-foreground" style={mono}>ASSET MANAGEMENT</div>
@@ -1726,8 +1726,8 @@ function HomePage() {
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-primary flex items-center justify-center">
-              <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
+            <div className="w-15 h-15 overflow-hidden flex items-center justify-center">
+              <img src="/logo.png" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
@@ -1866,9 +1866,9 @@ function HomePage() {
           <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 bg-primary flex items-center justify-center">
-                  <Shield className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={2} />
-                </div>
+            <div className="w-6 h-6 overflow-hidden flex items-center justify-center">
+              <img src="/logo.png" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
+            </div>
                 <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.12em" }}>AION BLUE STONE</span>
               </div>
               <p className="text-[10px] text-muted-foreground max-w-xs" style={mono}>
@@ -1936,8 +1936,8 @@ function LoginPage() {
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 border-r border-border bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(0deg,currentColor,currentColor 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,currentColor,currentColor 1px,transparent 1px,transparent 40px)", color: "var(--foreground)" }} />
         <button type="button" onClick={() => navigate("home")} className="relative flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity cursor-pointer">
-          <div className="w-7 h-7 bg-primary flex items-center justify-center">
-            <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
+          <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
+            <img src="/logo.png" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
@@ -1960,9 +1960,9 @@ function LoginPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 py-10 sm:py-12">
         {/* Mobile logo */}
         <button type="button" onClick={() => navigate("home")} className="lg:hidden flex items-center gap-2.5 mb-8 hover:opacity-90 transition-opacity cursor-pointer">
-          <div className="w-7 h-7 bg-primary flex items-center justify-center">
-            <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
-          </div>
+            <div className="w-7 h-7 overflow-hidden flex items-center justify-center">
+              <img src="/logo.png" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
+            </div>
           <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
         </button>
 
@@ -2024,8 +2024,8 @@ function SignupPage() {
       <div className="hidden lg:flex lg:w-2/5 flex-col justify-between p-12 border-r border-border bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "24px 24px", color: "var(--foreground)" }} />
         <button type="button" onClick={() => navigate("home")} className="relative flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity cursor-pointer">
-          <div className="w-7 h-7 bg-primary flex items-center justify-center">
-            <Shield className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
+          <div className="w-4 h-4 overflow-hidden flex items-center justify-center">
+            <img src="/logo.png" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</div>
@@ -2056,8 +2056,8 @@ function SignupPage() {
         <div className="lg:hidden w-full max-w-md mb-6">
           <div className="flex items-center justify-between">
             <button type="button" onClick={() => navigate("home")} className="flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer">
-              <div className="w-6 h-6 bg-primary flex items-center justify-center">
-                <Shield className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={2} />
+              <div className="w-6 h-6 overflow-hidden flex items-center justify-center">
+                <img src="/logo.png" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
               </div>
               <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
             </button>
