@@ -13,7 +13,7 @@ import {
   BarChart2, Globe, Building2, Menu, Home, Phone,
   RefreshCw, Download, Upload, AlertCircle, ChevronRight
 } from "lucide-react";
-import { getPortfolio, getQuotes } from "../services/api";
+import { AuthUser, createAuthSession, getCurrentUser, getPortfolio, getQuotes, logout as apiLogout } from "../services/api";
 import { loadMsg91Widget, normalizePhoneNumber, retryMsg91Otp, sendMsg91Otp, verifyMsg91Otp } from "../services/msg91";
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -94,6 +94,8 @@ interface AppCtx {
   focusMode: boolean; setFocusMode: (v: boolean) => void;
   navigate: (page: NavPage, subview?: string) => void;
   currentPage: NavPage; currentSubview: string;
+  user: AuthUser | null; setUser: (user: AuthUser | null) => void;
+  logout: () => Promise<void>;
 }
 
 const Ctx = createContext<AppCtx>({} as AppCtx);
@@ -510,7 +512,7 @@ function MobileBottomNav({ active, onNav }: { active: string; onNav: (id: string
 // ─── Topbar ───────────────────────────────────────────────────────────────────
 
 function Topbar({ title, subtitle, onMenuOpen }: { title: string; subtitle?: string; onMenuOpen?: () => void }) {
-  const { focusMode, navigate } = useApp();
+  const { focusMode, navigate, user, logout } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const results = searchTerm ? productCatalog.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.type.toLowerCase().includes(searchTerm.toLowerCase())) : [];
 
@@ -555,6 +557,8 @@ function Topbar({ title, subtitle, onMenuOpen }: { title: string; subtitle?: str
           <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
         </button>
         <ThemeSwitcher />
+        {user && <span className="hidden sm:block text-xs text-muted-foreground" style={mono}>{user.fullName}</span>}
+        {user && <button onClick={() => void logout()} className="text-[10px] text-primary hover:underline" style={mono}>LOG OUT</button>}
       </div>
     </div>
   );
@@ -1922,7 +1926,7 @@ function ForgotPasswordPage() {
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 function LoginPage() {
-  const { navigate } = useApp();
+  const { navigate, setUser } = useApp();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -1950,7 +1954,9 @@ function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await verifyMsg91Otp(otp.trim());
+      const verification = await verifyMsg91Otp(otp.trim());
+      const user = await createAuthSession({ phoneNumber: normalizePhoneNumber(phone), verificationToken: JSON.stringify(verification) });
+      setUser(user);
       navigate("app");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid OTP.");
@@ -2029,7 +2035,7 @@ function LoginPage() {
 // ─── Signup ───────────────────────────────────────────────────────────────────
 
 function SignupPage() {
-  const { navigate } = useApp();
+  const { navigate, setUser } = useApp();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -2049,7 +2055,9 @@ function SignupPage() {
         await sendMsg91Otp(normalizePhoneNumber(phone));
         setOtpSent(true);
       } else {
-        await verifyMsg91Otp(otp.trim());
+        const verification = await verifyMsg91Otp(otp.trim());
+        const user = await createAuthSession({ fullName: name.trim(), phoneNumber: normalizePhoneNumber(phone), verificationToken: JSON.stringify(verification) });
+        setUser(user);
         navigate("app");
       }
     } catch (err) {
@@ -2137,6 +2145,21 @@ export default function App() {
   const initialRoute = typeof window !== "undefined" ? pathToRoute(window.location.pathname) : { page: "home" as NavPage, subview: "dashboard" };
   const [currentPage, setCurrentPage] = useState<NavPage>(initialRoute.page);
   const [currentSubview, setCurrentSubview] = useState(initialRoute.subview);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(setUser)
+      .catch(() => setUser(null))
+      .finally(() => setAuthLoading(false));
+  }, []);
+
+  const logout = async () => {
+    await apiLogout().catch(() => undefined);
+    setUser(null);
+    navigate("login");
+  };
 
   const applyRoute = (route: AppRoute, pushHistory = true) => {
     const nextPage = route.page;
@@ -2173,7 +2196,7 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, [initialRoute]);
 
-  const ctx: AppCtx = { theme, setTheme, focusMode, setFocusMode, navigate, currentPage, currentSubview };
+  const ctx: AppCtx = { theme, setTheme, focusMode, setFocusMode, navigate, currentPage, currentSubview, user, setUser, logout };
 
   return (
     <Ctx.Provider value={ctx}>
@@ -2182,12 +2205,13 @@ export default function App() {
         {currentPage === "login" && <LoginPage />}
         {currentPage === "signup" && <SignupPage />}
         {currentPage === "forgot-password" && <ForgotPasswordPage />}
-        {currentPage === "app" && (
+        {currentPage === "app" && user && (
           <AppShell subview={currentSubview} onNav={(v) => {
             if (v === "wallet" || v === "payment") navigate(v as NavPage);
             else setCurrentSubview(v);
           }} />
         )}
+        {currentPage === "app" && !user && !authLoading && <LoginPage />}
         {currentPage === "wallet" && <FinancePage view="wallet" />}
         {currentPage === "payment" && <FinancePage view="payment" />}
       </div>

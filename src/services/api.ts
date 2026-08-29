@@ -10,6 +10,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    if (body?.error) throw new Error(body.error);
     throw new Error(`Request failed with status ${response.status}`);
   }
 
@@ -28,5 +30,31 @@ export async function createOrder(payload: { symbol: string; side: string; qty: 
   return request('/orders', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export interface AuthUser {
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+  createdAt: string;
+}
+
+export async function createAuthSession(payload: { fullName?: string; phoneNumber: string; verificationToken: string }) {
+  return request<AuthUser>('/auth/session', {
+    method: 'POST',
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getCurrentUser() {
+  return request<AuthUser>('/auth/me', { credentials: 'include' });
+}
+
+export async function logout() {
+  return request<{ status: string }>('/auth/logout', {
+    method: 'POST',
+    credentials: 'include',
   });
 }
