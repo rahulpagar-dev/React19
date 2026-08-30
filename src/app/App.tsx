@@ -10,10 +10,11 @@ import {
   CircleDot, Sun, Moon, Eye, Minimize2, Maximize2, ArrowUpRight,
   ArrowDownRight, Wallet, CreditCard,
   ArrowRight, Check, X, Plus, Lock, Mail, User,
-  BarChart2, Globe, Building2, Menu, Home,
+  BarChart2, Globe, Building2, Menu, Home, Phone,
   RefreshCw, Download, Upload, AlertCircle, ChevronRight
 } from "lucide-react";
-import { getPortfolio, getQuotes } from "../services/api";
+import { AuthUser, createAuthSession, getCurrentUser, getPortfolio, getQuotes, logout as apiLogout } from "../services/api";
+import { loadMsg91Widget, normalizePhoneNumber, retryMsg91Otp, sendMsg91Otp, verifyMsg91Otp } from "../services/msg91";
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,8 @@ interface AppCtx {
   focusMode: boolean; setFocusMode: (v: boolean) => void;
   navigate: (page: NavPage, subview?: string) => void;
   currentPage: NavPage; currentSubview: string;
+  user: AuthUser | null; setUser: (user: AuthUser | null) => void;
+  logout: () => Promise<void>;
 }
 
 const Ctx = createContext<AppCtx>({} as AppCtx);
@@ -314,8 +317,9 @@ function Btn({ children, variant = "primary", onClick, className = "", type = "b
   );
 }
 
-function FInput({ label, type = "text", placeholder, value, onChange, icon: Icon }: {
+function FInput({ label, type = "text", inputMode, placeholder, value, onChange, icon: Icon }: {
   label?: string; type?: string; placeholder?: string; value?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   onChange?: (v: string) => void; icon?: React.ElementType;
 }) {
   return (
@@ -323,7 +327,7 @@ function FInput({ label, type = "text", placeholder, value, onChange, icon: Icon
       {label && <label className="text-xs text-muted-foreground tracking-widest uppercase" style={mono}>{label}</label>}
       <div className="relative">
         {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />}
-        <input type={type} placeholder={placeholder} value={value} onChange={e => onChange?.(e.target.value)}
+        <input type={type} inputMode={inputMode} placeholder={placeholder} value={value} onChange={e => onChange?.(e.target.value)}
           className={`w-full bg-[var(--input-background)] border border-border text-foreground placeholder-muted-foreground outline-none focus:border-primary/60 transition-colors py-2.5 text-sm ${Icon ? "pl-9 pr-4" : "px-4"}`}
           style={body} />
       </div>
@@ -508,7 +512,7 @@ function MobileBottomNav({ active, onNav }: { active: string; onNav: (id: string
 // ─── Topbar ───────────────────────────────────────────────────────────────────
 
 function Topbar({ title, subtitle, onMenuOpen }: { title: string; subtitle?: string; onMenuOpen?: () => void }) {
-  const { focusMode, navigate } = useApp();
+  const { focusMode, navigate, user, logout } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const results = searchTerm ? productCatalog.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.type.toLowerCase().includes(searchTerm.toLowerCase())) : [];
 
@@ -553,6 +557,8 @@ function Topbar({ title, subtitle, onMenuOpen }: { title: string; subtitle?: str
           <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
         </button>
         <ThemeSwitcher />
+        {user && <span className="hidden sm:block text-xs text-muted-foreground" style={mono}>{user.fullName}</span>}
+        {user && <button onClick={() => void logout()} className="text-[10px] text-primary hover:underline" style={mono}>LOG OUT</button>}
       </div>
     </div>
   );
@@ -1920,14 +1926,43 @@ function ForgotPasswordPage() {
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 function LoginPage() {
-  const { navigate } = useApp();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { navigate, setUser } = useApp();
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = () => {
+  useEffect(() => {
+    loadMsg91Widget().catch(err => setError(err instanceof Error ? err.message : "Unable to load OTP verification."));
+  }, []);
+
+  const handleSendOtp = async () => {
     setLoading(true);
-    setTimeout(() => { setLoading(false); navigate("app"); }, 1200);
+    setError("");
+    try {
+      await sendMsg91Otp(normalizePhoneNumber(phone));
+      setOtpSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to send OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const verification = await verifyMsg91Otp(otp.trim());
+      const user = await createAuthSession({ phoneNumber: normalizePhoneNumber(phone), verificationToken: JSON.stringify(verification) });
+      setUser(user);
+      navigate("app");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid OTP.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -1972,19 +2007,16 @@ function LoginPage() {
             <p className="text-sm text-muted-foreground" style={{ fontWeight: 300 }}>Welcome back. Please enter your credentials.</p>
           </div>
           <div className="space-y-4">
-            <FInput label="Email Address" type="email" placeholder="you@firm.com" value={email} onChange={setEmail} icon={Mail} />
-            <FInput label="Password" type="password" placeholder="••••••••" value={password} onChange={setPassword} icon={Lock} />
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <div className="w-4 h-4 border border-border bg-input-background flex items-center justify-center"><div className="w-2 h-2 bg-primary opacity-0" /></div>
-                <span className="text-xs text-muted-foreground" style={mono}>REMEMBER ME</span>
-              </label>
-              <button onClick={() => navigate("forgot-password")} className="text-xs text-primary hover:underline" style={mono}>FORGOT PASSWORD?</button>
-            </div>
-            <button onClick={handleLogin} disabled={loading || !email || !password}
+            <FInput label="Phone Number" type="tel" inputMode="tel" placeholder="919999999999" value={phone} onChange={setPhone} icon={Phone} />
+            {!otpSent && <p className="text-xs text-muted-foreground" style={mono}>Include your country code without the + sign.</p>}
+            {!otpSent && <div id="msg91-captcha" className="min-h-0" />}
+            {otpSent && <FInput label="One-Time Password" inputMode="numeric" placeholder="Enter the OTP" value={otp} onChange={setOtp} icon={Lock} />}
+            {error && <p className="text-xs text-destructive" style={mono}>{error}</p>}
+            {otpSent && <button type="button" onClick={() => retryMsg91Otp().catch(err => setError(err instanceof Error ? err.message : "Unable to resend OTP."))} className="text-xs text-primary hover:underline" style={mono}>RESEND OTP</button>}
+            <button onClick={otpSent ? handleLogin : handleSendOtp} disabled={loading || (otpSent ? !otp.trim() : phone.replace(/\D/g, "").length < 8)}
               className="w-full py-3 bg-primary text-primary-foreground text-sm tracking-widest disabled:opacity-40 hover:opacity-90 transition-all flex items-center justify-center gap-2"
               style={condensed}>
-              {loading ? <><RefreshCw className="w-4 h-4 animate-spin" />SIGNING IN...</> : <>SIGN IN <ArrowRight className="w-4 h-4" /></>}
+              {loading ? <><RefreshCw className="w-4 h-4 animate-spin" />{otpSent ? "VERIFYING..." : "SENDING OTP..."}</> : <>{otpSent ? "VERIFY OTP" : "SEND OTP"} <ArrowRight className="w-4 h-4" /></>}
             </button>
           </div>
           <div className="mt-6 pt-6 border-t border-border text-center">
@@ -2003,24 +2035,40 @@ function LoginPage() {
 // ─── Signup ───────────────────────────────────────────────────────────────────
 
 function SignupPage() {
-  const { navigate } = useApp();
-  const [step, setStep] = useState(1);
-  const [accountType, setAccountType] = useState("individual");
+  const { navigate, setUser } = useApp();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const steps = [{ n: 1, label: "Account Type" }, { n: 2, label: "Your Details" }, { n: 3, label: "Security" }];
+  useEffect(() => {
+    loadMsg91Widget().catch(err => setError(err instanceof Error ? err.message : "Unable to load OTP verification."));
+  }, []);
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     setLoading(true);
-    setTimeout(() => { setLoading(false); navigate("app"); }, 1400);
+    setError("");
+    try {
+      if (!otpSent) {
+        await sendMsg91Otp(normalizePhoneNumber(phone));
+        setOtpSent(true);
+      } else {
+        const verification = await verifyMsg91Otp(otp.trim());
+        const user = await createAuthSession({ fullName: name.trim(), phoneNumber: normalizePhoneNumber(phone), verificationToken: JSON.stringify(verification) });
+        setUser(user);
+        navigate("app");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to verify OTP.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row" style={body}>
-      {/* Brand panel — hidden on mobile */}
       <div className="hidden lg:flex lg:w-2/5 flex-col justify-between p-12 border-r border-border bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "24px 24px", color: "var(--foreground)" }} />
         <button type="button" onClick={() => navigate("home")} className="relative flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity cursor-pointer">
@@ -2036,106 +2084,45 @@ function SignupPage() {
           <h2 style={{ ...condensed, fontWeight: 700, fontSize: "2.5rem", letterSpacing: "0.04em", textTransform: "uppercase", lineHeight: 1.1 }} className="text-foreground mb-6">
             Start building<br /><span className="text-primary">wealth</span> today.
           </h2>
-          <div className="space-y-4">
-            {steps.map(({ n, label }) => (
-              <div key={n} className={`flex items-center gap-3 ${step >= n ? "text-foreground" : "text-muted-foreground"}`}>
-                <div className={`w-6 h-6 border flex items-center justify-center text-xs shrink-0 transition-colors ${step > n ? "bg-primary border-primary text-primary-foreground" : step === n ? "border-primary text-primary" : "border-border"}`} style={mono}>
-                  {step > n ? <Check className="w-3 h-3" /> : n}
-                </div>
-                <span className="text-sm" style={condensed}>{label.toUpperCase()}</span>
-              </div>
-            ))}
-          </div>
         </div>
         <div className="relative text-[10px] text-muted-foreground" style={mono}>© 2024 Aion Blue Stone Asset Management LLC</div>
       </div>
 
       {/* Form */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 py-10 sm:py-12">
-        {/* Mobile header */}
         <div className="lg:hidden w-full max-w-md mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <button type="button" onClick={() => navigate("home")} className="flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer">
               <div className="w-6 h-6 overflow-hidden flex items-center justify-center">
                 <img src="/logo.png" alt="Aion Blue Stone logo" className="w-full h-full object-cover" />
               </div>
               <span className="text-sm font-bold text-foreground" style={{ ...condensed, letterSpacing: "0.15em" }}>AION BLUE STONE</span>
             </button>
-            <div className="flex gap-1">
-              {steps.map(({ n }) => (
-                <div key={n} className={`w-6 h-1 transition-colors ${step >= n ? "bg-primary" : "bg-border"}`} />
-              ))}
-            </div>
           </div>
         </div>
 
         <div className="w-full max-w-md">
           <div className="mb-6">
-            <div className="text-[10px] text-muted-foreground mb-1" style={mono}>STEP {step} OF {steps.length}</div>
-            <h1 style={{ ...condensed, fontWeight: 700, fontSize: "1.8rem", letterSpacing: "0.06em", textTransform: "uppercase" }} className="text-foreground">{steps[step - 1].label}</h1>
+            <h1 style={{ ...condensed, fontWeight: 700, fontSize: "1.8rem", letterSpacing: "0.06em", textTransform: "uppercase" }} className="text-foreground">Open Account</h1>
           </div>
 
-          {step === 1 && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-4" style={{ fontWeight: 300 }}>Select the account type that best describes you.</p>
-              {[
-                { id: "individual", title: "Individual / Family", desc: "Personal or family office account", icon: User },
-                { id: "institutional", title: "Institutional", desc: "Endowment, foundation, or corporate", icon: Building2 },
-                { id: "advisor", title: "Financial Advisor", desc: "RIA or advisor managing client assets", icon: Briefcase },
-              ].map(({ id, title, desc, icon: Icon }) => (
-                <button key={id} onClick={() => setAccountType(id)}
-                  className={`w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border text-left transition-colors ${accountType === id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
-                  <div className={`w-9 h-9 sm:w-10 sm:h-10 border flex items-center justify-center shrink-0 ${accountType === id ? "border-primary bg-primary/10" : "border-border"}`}>
-                    <Icon className={`w-4 h-4 ${accountType === id ? "text-primary" : "text-muted-foreground"}`} strokeWidth={1.5} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm text-foreground" style={{ ...condensed, fontWeight: 600, letterSpacing: "0.04em" }}>{title.toUpperCase()}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5" style={mono}>{desc}</div>
-                  </div>
-                  {accountType === id && <Check className="w-4 h-4 text-primary ml-auto shrink-0" />}
-                </button>
-              ))}
-              <Btn variant="primary" className="w-full justify-center mt-2" onClick={() => setStep(2)}>
-                CONTINUE <ArrowRight className="w-4 h-4" />
-              </Btn>
+          <div className="space-y-4">
+            <FInput label="Full Name" placeholder="Margaret Okafor" value={name} onChange={setName} icon={User} />
+            <FInput label="Phone Number" type="tel" inputMode="tel" placeholder="919999999999" value={phone} onChange={setPhone} icon={Phone} />
+            <p className="text-xs text-muted-foreground" style={mono}>Include your country code without the + sign.</p>
+            {!otpSent && <div id="msg91-captcha" className="min-h-0" />}
+            {otpSent && <FInput label="One-Time Password" inputMode="numeric" placeholder="Enter the OTP" value={otp} onChange={setOtp} icon={Lock} />}
+            {error && <p className="text-xs text-destructive" style={mono}>{error}</p>}
+            {otpSent && <button type="button" onClick={() => retryMsg91Otp().catch(err => setError(err instanceof Error ? err.message : "Unable to resend OTP."))} className="text-xs text-primary hover:underline" style={mono}>RESEND OTP</button>}
+            <div className="p-3 bg-muted border border-border text-xs text-muted-foreground" style={mono}>
+              By creating an account you agree to our Terms of Service and Privacy Policy.
             </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-4">
-              <FInput label="Full Name" placeholder="Margaret Okafor" value={name} onChange={setName} icon={User} />
-              <FInput label="Email Address" type="email" placeholder="m.okafor@firm.com" value={email} onChange={setEmail} icon={Mail} />
-              <div className="flex gap-3 mt-2">
-                <Btn variant="ghost" onClick={() => setStep(1)} className="flex-1 justify-center">BACK</Btn>
-                <Btn variant="primary" onClick={() => setStep(3)} disabled={!name || !email} className="flex-1 justify-center">
-                  CONTINUE <ArrowRight className="w-4 h-4" />
-                </Btn>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4">
-              <FInput label="Create Password" type="password" placeholder="Minimum 8 characters" value={password} onChange={setPassword} icon={Lock} />
-              <div className="grid grid-cols-4 gap-1">
-                {["8+ chars", "Upper", "Number", "Symbol"].map((req, i) => {
-                  const met = i === 0 ? password.length >= 8 : i === 1 ? /[A-Z]/.test(password) : i === 2 ? /\d/.test(password) : /[!@#$%]/.test(password);
-                  return <div key={req} className={`text-[10px] px-1 py-1 border text-center ${met ? "border-primary/40 text-primary bg-primary/5" : "border-border text-muted-foreground"}`} style={mono}>{req}</div>;
-                })}
-              </div>
-              <div className="p-3 bg-muted border border-border text-xs text-muted-foreground" style={mono}>
-                By creating an account you agree to our Terms of Service and Privacy Policy.
-              </div>
-              <div className="flex gap-3">
-                <Btn variant="ghost" onClick={() => setStep(2)} className="flex-1 justify-center">BACK</Btn>
-                <button onClick={handleFinish} disabled={loading || password.length < 8}
-                  className="flex-1 py-2.5 bg-primary text-primary-foreground text-xs tracking-widest disabled:opacity-40 hover:opacity-90 transition-all flex items-center justify-center gap-2"
-                  style={condensed}>
-                  {loading ? <><RefreshCw className="w-4 h-4 animate-spin" />CREATING...</> : <>CREATE ACCOUNT <Check className="w-4 h-4" /></>}
-                </button>
-              </div>
-            </div>
-          )}
+            <button onClick={handleFinish} disabled={loading || (otpSent ? !otp.trim() : !name.trim() || phone.replace(/\D/g, "").length < 8)}
+              className="w-full py-2.5 bg-primary text-primary-foreground text-xs tracking-widest disabled:opacity-40 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              style={condensed}>
+              {loading ? <><RefreshCw className="w-4 h-4 animate-spin" />{otpSent ? "VERIFYING..." : "SENDING OTP..."}</> : <>{otpSent ? "VERIFY OTP" : "SEND OTP"} <Check className="w-4 h-4" /></>}
+            </button>
+          </div>
 
           <div className="mt-6 pt-6 border-t border-border text-center">
             <p className="text-xs text-muted-foreground" style={mono}>
@@ -2158,6 +2145,21 @@ export default function App() {
   const initialRoute = typeof window !== "undefined" ? pathToRoute(window.location.pathname) : { page: "home" as NavPage, subview: "dashboard" };
   const [currentPage, setCurrentPage] = useState<NavPage>(initialRoute.page);
   const [currentSubview, setCurrentSubview] = useState(initialRoute.subview);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(setUser)
+      .catch(() => setUser(null))
+      .finally(() => setAuthLoading(false));
+  }, []);
+
+  const logout = async () => {
+    await apiLogout().catch(() => undefined);
+    setUser(null);
+    navigate("login");
+  };
 
   const applyRoute = (route: AppRoute, pushHistory = true) => {
     const nextPage = route.page;
@@ -2194,7 +2196,7 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, [initialRoute]);
 
-  const ctx: AppCtx = { theme, setTheme, focusMode, setFocusMode, navigate, currentPage, currentSubview };
+  const ctx: AppCtx = { theme, setTheme, focusMode, setFocusMode, navigate, currentPage, currentSubview, user, setUser, logout };
 
   return (
     <Ctx.Provider value={ctx}>
@@ -2203,12 +2205,13 @@ export default function App() {
         {currentPage === "login" && <LoginPage />}
         {currentPage === "signup" && <SignupPage />}
         {currentPage === "forgot-password" && <ForgotPasswordPage />}
-        {currentPage === "app" && (
+        {currentPage === "app" && user && (
           <AppShell subview={currentSubview} onNav={(v) => {
             if (v === "wallet" || v === "payment") navigate(v as NavPage);
             else setCurrentSubview(v);
           }} />
         )}
+        {currentPage === "app" && !user && !authLoading && <LoginPage />}
         {currentPage === "wallet" && <FinancePage view="wallet" />}
         {currentPage === "payment" && <FinancePage view="payment" />}
       </div>
